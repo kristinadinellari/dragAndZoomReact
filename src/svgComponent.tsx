@@ -50,40 +50,31 @@ class SvgDragAndZoom extends Component<{}, SvgDragAndZoomState> {
     }));
   };
 
-  zoom = (e: any) => {
-    console.log(e, "event eee");
-    console.log(e.deltaY, "e.deltaY event");
-    e.preventDefault();
-
-    const scaleFactor = 1.2; // this value is to define how much you want to scale
-    const delta = e.clientY > 0 ? scaleFactor : 1 / scaleFactor;
-
+  updateViewBox(client: any) {
     this.setState((prevState) => ({
       viewBox: {
         x: prevState.viewBox.x,
         y: prevState.viewBox.y,
-        width: prevState.viewBox.width * delta,
-        height: prevState.viewBox.height * delta,
+        width: prevState.viewBox.width * client,
+        height: prevState.viewBox.height * client,
       },
     }));
+  }
+
+  zoomOut = (e: any) => {
+    e.preventDefault();
+    const scaleFactor = 1.2;
+    const client = e.clientY > 0 ? scaleFactor : 1 / scaleFactor;
+    this.updateViewBox(client);
   };
 
-  zoom1 = (e: any) => {
-    console.log(e, "event eee");
-    console.log(e.deltaY, "e.deltaY event");
+  zoomIn = (e: any) => {
     e.preventDefault();
 
-    const scaleFactor = 1.2; // this value is to define how much you want to scale
-    const delta = e.clientY < 0 ? scaleFactor : 1 / scaleFactor;
+    const scaleFactor = 1.2;
+    const client = e.clientY < 0 ? scaleFactor : 1 / scaleFactor;
 
-    this.setState((prevState) => ({
-      viewBox: {
-        x: prevState.viewBox.x,
-        y: prevState.viewBox.y,
-        width: prevState.viewBox.width * delta,
-        height: prevState.viewBox.height * delta,
-      },
-    }));
+    this.updateViewBox(client);
   };
 
   render() {
@@ -110,11 +101,10 @@ class SvgDragAndZoom extends Component<{}, SvgDragAndZoomState> {
         onMouseDown={this.startDrag}
         onMouseUp={this.endDrag}
         onMouseMove={this.drag}
-        // onWheel={this.zoom}
         style={{ width: "600px", height: "600px", overflow: "hidden" }}
       >
-        <button onClick={this.zoom}>Zoom out</button>
-        <button onClick={this.zoom1}>Zoom in</button>
+        <button onClick={this.zoomOut}>Zoom out</button>
+        <button onClick={this.zoomIn}>Zoom in</button>
         <div
           dangerouslySetInnerHTML={{ __html: modifiedSvgString }}
           style={{ width: "100%", height: "100%" }}
