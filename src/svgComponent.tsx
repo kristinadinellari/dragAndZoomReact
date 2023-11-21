@@ -4,25 +4,16 @@ import { SVG } from "./svg"; // if we will use this as a string
 // import { ReactComponent as SVGTest } from "./svgTest.svg"; if we will use this as a component directly
 
 interface SvgDragAndZoomState {
-  containerRect: { height: number, width: number },
   isDragging: boolean;
   startPoint: { x: number; y: number };
   viewBox: { x: number; y: number; width: number; height: number };
 }
 
 class SvgDragAndZoom extends Component<{}, SvgDragAndZoomState> {
-  containerRef: any;
-  
-
   constructor(props: {}) {
     super(props);
 
-    const defaultRect = { height: 0, width: 0};
-
-    this.containerRef = React.createRef();
-    
     this.state = {
-      containerRect: defaultRect,
       isDragging: false,
       startPoint: { x: 0, y: 0 },
       viewBox: { x: 0, y: 0, width: 0, height: 0 }, // Set initial viewBox dimensions
@@ -30,14 +21,16 @@ class SvgDragAndZoom extends Component<{}, SvgDragAndZoomState> {
   }
 
   componentDidMount = () => {
-    this.setState(state => {
-      if (this.containerRef.current) {
-        const containerRect = this.containerRef.current.getBoundingClientRect();
-        console.log("componentDidMount");
-        console.log('Container height and width: ', containerRect.height, containerRect.width);
-        state.viewBox.width = containerRect.width;
-        state.viewBox.height = containerRect.height;
-      } 
+    this.getAndSetSvgSize();
+  }
+
+  getAndSetSvgSize() {
+    console.log('size: ', document.getElementsByClassName('svg')[0].getElementsByTagName('svg')[0].getBBox());
+    const svgSize =  document.getElementsByClassName('svg')[0].getElementsByTagName('svg')[0].getBBox();
+    this.setState({
+      isDragging: false,
+      startPoint: { x: 0, y: 0 },
+      viewBox: { x: 0, y: 0, width: svgSize.width, height: svgSize.height }, // Update viewBox after getting the svg dimensions
     });
   }
 
@@ -130,7 +123,6 @@ class SvgDragAndZoom extends Component<{}, SvgDragAndZoomState> {
         // onWheel={this.zoom}
         className="discoveredModel"
         style={{ width: "100%", height: "100%", overflow: "hidden" }}
-        ref={this.containerRef}
       >
         <div className="buttons" style={{ display: "flex", justifyContent: "center" }}>
           <button onClick={this.zoom}>Zoom out</button>
