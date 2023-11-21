@@ -30,15 +30,23 @@ class SvgDragAndZoom extends Component<{}, SvgDragAndZoomState> {
   }
 
   componentDidMount = () => {
-    this.setState(state => {
-      if (this.containerRef.current) {
-        const containerRect = this.containerRef.current.getBoundingClientRect();
-        console.log("componentDidMount");
-        console.log('Container height and width: ', containerRect.height, containerRect.width);
-        state.viewBox.width = containerRect.width;
-        state.viewBox.height = containerRect.height;
-      } 
-    });
+    if (this.containerRef.current) {
+      const bbBox = this.containerRef.current.getElementsByTagName('svg')[0].getBBox();
+      console.log("bbBox: " + bbBox);
+      
+      console.log("componentDidMount")      
+      
+      this.setState((prevState) => {        
+        return ({
+          viewBox: {  
+            x: prevState.viewBox.x,
+            y: prevState.viewBox.y,
+            width: bbBox? bbBox.width: 0,
+            height: bbBox? bbBox.height: 0,
+          },
+        });  
+      });
+    }    
   }
 
   startDrag = (e: React.MouseEvent) => {
@@ -76,15 +84,17 @@ class SvgDragAndZoom extends Component<{}, SvgDragAndZoomState> {
 
     const scaleFactor = 1.2; // this value is to define how much you want to scale
     const delta = e.clientY > 0 ? scaleFactor : 1 / scaleFactor;
-
-    this.setState((prevState) => ({
-      viewBox: {
-        x: prevState.viewBox.x,
-        y: prevState.viewBox.y,
-        width: prevState.viewBox.width * delta,
-        height: prevState.viewBox.height * delta,
-      },
-    }));
+    
+    this.setState((prevState) => {      
+      return ({
+        viewBox: {
+          x: prevState.viewBox.x,
+          y: prevState.viewBox.y,
+          width: prevState.viewBox.width * delta,
+          height: prevState.viewBox.height * delta,
+        },
+      });  
+    });
   };
 
   zoom1 = (e: any) => {
@@ -110,7 +120,7 @@ class SvgDragAndZoom extends Component<{}, SvgDragAndZoomState> {
     const svgDocument = parser.parseFromString(SVG, "image/svg+xml");
 
     if (newViewBox) {
-      const svgElement = svgDocument.querySelector("svg");
+      const svgElement = svgDocument.querySelector("svg");      
       if (svgElement) {
         svgElement.setAttribute("viewBox", newViewBox);
       }
@@ -118,9 +128,9 @@ class SvgDragAndZoom extends Component<{}, SvgDragAndZoomState> {
 
     const modifiedSvgString = new XMLSerializer().serializeToString(
       svgDocument
-    );
+    );    
 
-    console.log('svgDocument', svgDocument);
+    console.log('svgDocument', svgDocument);    
 
     return (
       <div
