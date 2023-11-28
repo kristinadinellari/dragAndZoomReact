@@ -1,7 +1,8 @@
-import React, { Component } from "react";
+import React, { Component, createRef } from "react";
 import { SVG } from "./svg"; // if we will use this as a string
 // import SVGTest from "./svgTest.svg"; // if we will use as an image
 // import { ReactComponent as SVGTest } from "./svgTest.svg"; if we will use this as a component directly
+import panzoom  from "panzoom"
 
 interface SvgDragAndZoomState {
   isDragging: boolean;
@@ -10,6 +11,9 @@ interface SvgDragAndZoomState {
 }
 
 class SvgDragAndZoom extends Component<{}, SvgDragAndZoomState> {
+  panZoomRef: any;
+  elementRef: any;
+  
   constructor(props: {}) {
     super(props);
 
@@ -18,10 +22,17 @@ class SvgDragAndZoom extends Component<{}, SvgDragAndZoomState> {
       startPoint: { x: 0, y: 0 },
       viewBox: { x: 0, y: 0, width: 0, height: 0 }, // Set initial viewBox dimensions
     };
+
+  
+    this.panZoomRef = createRef();
+    this.elementRef = createRef();
   }
 
   componentDidMount = () => {
     this.getAndSetSvgSize();
+    this.panZoomRef.current = panzoom(this.elementRef.current);
+    this.panZoomRef.current.on('pan', () => console.log('Pan!'));
+    this.panZoomRef.current.on('zoom', () => console.log('Zoom!'));
   }
 
   getAndSetSvgSize() {
@@ -31,38 +42,8 @@ class SvgDragAndZoom extends Component<{}, SvgDragAndZoomState> {
       isDragging: false,
       startPoint: { x: 0, y: 0 },
       viewBox: { x: 0, y: 0, width: svgSize.width, height: svgSize.height }, // Update viewBox after getting the svg dimensions
-    });
+    });    
   }
-
-  startDrag = (e: React.MouseEvent) => {
-    this.setState({
-      isDragging: true,
-      startPoint: { x: e.clientX, y: e.clientY },
-    });
-  };
-
-  endDrag = () => {
-    this.setState({
-      isDragging: false,
-    });
-  };
-
-  drag = (e: React.MouseEvent) => {
-    if (!this.state.isDragging) return;
-
-    const dx = e.clientX - this.state.startPoint.x;
-    const dy = e.clientY - this.state.startPoint.y;
-
-    this.setState((prevState) => ({
-      startPoint: { x: e.clientX, y: e.clientY },
-      viewBox: {
-        x: prevState.viewBox.x - dx,
-        y: prevState.viewBox.y - dy,
-        width: prevState.viewBox.width,
-        height: prevState.viewBox.height,
-      },
-    }));
-  };
 
   zoom = (e: any) => {
     e.preventDefault();
@@ -97,6 +78,7 @@ class SvgDragAndZoom extends Component<{}, SvgDragAndZoomState> {
   };
 
   render() {
+    console.log("Rendering: " + Date.now());
     const { viewBox } = this.state;
     const newViewBox = `${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`;
     const parser = new DOMParser();
@@ -113,15 +95,12 @@ class SvgDragAndZoom extends Component<{}, SvgDragAndZoomState> {
       svgDocument
     );
 
-    console.log('svgDocument', svgDocument);
+    // console.log('svgDocument', svgDocument);
 
     return (
-      <div
-        onMouseDown={this.startDrag}
-        onMouseUp={this.endDrag}
-        onMouseMove={this.drag}
+      <div        
         // onWheel={this.zoom}
-        className="discoveredModel"
+        className="discoveredModel"        
         style={{ width: "100%", height: "100%", overflow: "hidden" }}
       >
         <div className="buttons" style={{ display: "flex", justifyContent: "center" }}>
@@ -130,6 +109,7 @@ class SvgDragAndZoom extends Component<{}, SvgDragAndZoomState> {
         </div>
 
         <div
+          ref={this.elementRef}
           dangerouslySetInnerHTML={{ __html: modifiedSvgString }}
           className="svg"
           // style={{ width: "100%", height: "100%" }}
