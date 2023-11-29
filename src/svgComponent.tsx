@@ -1,7 +1,7 @@
-import React, { Component } from "react";
-import { SVG } from "./svg"; // if we will use this as a string
-// import SVGTest from "./svgTest.svg"; // if we will use as an image
-// import { ReactComponent as SVGTest } from "./svgTest.svg"; if we will use this as a component directly
+import React, { Component, createRef } from "react";
+import { SVG } from "./svg"; 
+
+import Panzoom from '@panzoom/panzoom'
 
 interface SvgDragAndZoomState {
   isDragging: boolean;
@@ -10,6 +10,8 @@ interface SvgDragAndZoomState {
 }
 
 class SvgDragAndZoom extends Component<{}, SvgDragAndZoomState> {
+  panzoom: any
+  
   constructor(props: {}) {
     super(props);
 
@@ -22,6 +24,16 @@ class SvgDragAndZoom extends Component<{}, SvgDragAndZoomState> {
 
   componentDidMount = () => {
     this.getAndSetSvgSize();
+    const elem = document.getElementById('panzoom-element')
+    if (elem) {
+      this.panzoom = Panzoom(elem, {
+        maxScale: 50,
+        cursor: 'grab'
+      });
+      document.getElementById('zoomIn')?.addEventListener('click', this.panzoom.zoomIn);
+      document.getElementById('zoomOut')?.addEventListener('click', this.panzoom.zoomOut);
+      elem.addEventListener('wheel', this.panzoom.zoomWithWheel);
+    }
   }
 
   getAndSetSvgSize() {
@@ -30,73 +42,12 @@ class SvgDragAndZoom extends Component<{}, SvgDragAndZoomState> {
     this.setState({
       isDragging: false,
       startPoint: { x: 0, y: 0 },
-      viewBox: { x: 0, y: 0, width: svgSize.width, height: svgSize.height }, // Update viewBox after getting the svg dimensions
-    });
+      viewBox: { x: 0, y: 0, width: svgSize.width, height: svgSize.height }, // Update viewBox after getting the svg dimensions      
+    });    
   }
 
-  startDrag = (e: React.MouseEvent) => {
-    this.setState({
-      isDragging: true,
-      startPoint: { x: e.clientX, y: e.clientY },
-    });
-  };
-
-  endDrag = () => {
-    this.setState({
-      isDragging: false,
-    });
-  };
-
-  drag = (e: React.MouseEvent) => {
-    if (!this.state.isDragging) return;
-
-    const dx = e.clientX - this.state.startPoint.x;
-    const dy = e.clientY - this.state.startPoint.y;
-
-    this.setState((prevState) => ({
-      startPoint: { x: e.clientX, y: e.clientY },
-      viewBox: {
-        x: prevState.viewBox.x - dx,
-        y: prevState.viewBox.y - dy,
-        width: prevState.viewBox.width,
-        height: prevState.viewBox.height,
-      },
-    }));
-  };
-
-  zoom = (e: any) => {
-    e.preventDefault();
-
-    const scaleFactor = 1.2; // this value is to define how much you want to scale
-    const delta = e.clientY > 0 ? scaleFactor : 1 / scaleFactor;
-
-    this.setState((prevState) => ({
-      viewBox: {
-        x: prevState.viewBox.x,
-        y: prevState.viewBox.y,
-        width: prevState.viewBox.width * delta,
-        height: prevState.viewBox.height * delta,
-      },
-    }));
-  };
-
-  zoom1 = (e: any) => {
-    e.preventDefault();
-
-    const scaleFactor = 1.2; // this value is to define how much you want to scale
-    const delta = e.clientY < 0 ? scaleFactor : 1 / scaleFactor;
-
-    this.setState((prevState) => ({
-      viewBox: {
-        x: prevState.viewBox.x,
-        y: prevState.viewBox.y,
-        width: prevState.viewBox.width * delta,
-        height: prevState.viewBox.height * delta,
-      },
-    }));
-  };
-
   render() {
+    console.log("Rendering: " + Date.now());
     const { viewBox } = this.state;
     const newViewBox = `${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`;
     const parser = new DOMParser();
@@ -113,35 +64,21 @@ class SvgDragAndZoom extends Component<{}, SvgDragAndZoomState> {
       svgDocument
     );
 
-    console.log('svgDocument', svgDocument);
-
     return (
-      <div
-        onMouseDown={this.startDrag}
-        onMouseUp={this.endDrag}
-        onMouseMove={this.drag}
-        // onWheel={this.zoom}
-        className="discoveredModel"
+      <div        
+        className="discoveredModel"        
         style={{ width: "100%", height: "100%", overflow: "hidden" }}
       >
         <div className="buttons" style={{ display: "flex", justifyContent: "center" }}>
-          <button onClick={this.zoom}>Zoom out</button>
-          <button onClick={this.zoom1}>Zoom in</button>
+          <button id="zoomIn" >Zoom out</button>
+          <button id="zoomOut">Zoom in</button>
         </div>
 
         <div
+          id="panzoom-element"
           dangerouslySetInnerHTML={{ __html: modifiedSvgString }}
           className="svg"
-          // style={{ width: "100%", height: "100%" }}
         />
-
-        {/* <img src={SVGTest} alt="" /> */}
-        {/* <SVGTest /> */}
-
-        {/* <svg
-          viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`}
-          dangerouslySetInnerHTML={{ __html: SVG }}
-        /> */}
       </div>
     );
   }
