@@ -5,36 +5,9 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-
-  .resizable {
-    background-repeat: no-repeat !important;
-    background-size: contain !important;
-  }
 }
 
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
-
-/* Martina - playing with css */
-/* 
-style="position: relative; 
-  user-select: auto; 
-  touch-action: none; 
-  background: url(&quot;https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRe7Ki-ys2G_MMb_xCrY7nAf87F5ZiIOyCh4f5H_JCTTtMSMLCL&quot;); 
-  transform: translate(133px, 1px); 
-  width: auto; 
-  height: 100%; 
-  box-sizing: 
-  border-box;" */
-
-  /* style="position: relative; 
-  user-select: auto; 
-  touch-action: none; 
-  background: url(&quot;blob:http://localhost:3000/1ee802e4-b1f9-40d2-9b59-9057acd1063e&quot;); 
-  transform: translate(65px, 4px);
-  width: auto; 
-  height: 100%; 
-  box-sizing: 
-  border-box;" */
