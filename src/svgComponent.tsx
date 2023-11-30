@@ -1,7 +1,30 @@
 import React, { Component } from "react";
-import { SVG } from "./svg"; // if we will use this as a string
-// import SVGTest from "./svgTest.svg"; // if we will use as an image
-// import { ReactComponent as SVGTest } from "./svgTest.svg"; if we will use this as a component directly
+import {
+  TransformWrapper,
+  TransformComponent,
+  ReactZoomPanPinchRef,
+} from "react-zoom-pan-pinch";
+import { SVG } from "./svg";
+
+interface ControlsProps {
+  zoomIn: () => void;
+  zoomOut: () => void;
+  resetTransform: () => void;
+}
+
+class Controls extends Component<ControlsProps> {
+  render() {
+    const { zoomIn, zoomOut, resetTransform } = this.props;
+
+    return (
+      <>
+        <button onClick={zoomIn}>+</button>
+        <button onClick={zoomOut}>-</button>
+        <button onClick={resetTransform}>x</button>
+      </>
+    );
+  }
+}
 
 interface SvgDragAndZoomState {
   isDragging: boolean;
@@ -9,10 +32,13 @@ interface SvgDragAndZoomState {
   viewBox: { x: number; y: number; width: number; height: number };
 }
 
-class SvgDragAndZoom extends Component<{}, SvgDragAndZoomState> {
+class YourComponent extends Component<{}, SvgDragAndZoomState> {
+  private transformComponentRef: React.RefObject<ReactZoomPanPinchRef>;
+  svgUrl: string | undefined;
+
   constructor(props: {}) {
     super(props);
-
+    this.transformComponentRef = React.createRef();
     this.state = {
       isDragging: false,
       startPoint: { x: 0, y: 0 },
@@ -22,79 +48,28 @@ class SvgDragAndZoom extends Component<{}, SvgDragAndZoomState> {
 
   componentDidMount = () => {
     this.getAndSetSvgSize();
-  }
+  };
+
+  zoomToImage = () => {
+    console.log("here");
+    if (this.transformComponentRef.current) {
+      console.log(this.transformComponentRef.current, "kristina");
+      const { zoomToElement } = this.transformComponentRef.current;
+      zoomToElement("imgExample");
+    }
+  };
 
   getAndSetSvgSize() {
-    console.log('size: ', document.getElementsByClassName('svg')[0].getElementsByTagName('svg')[0].getBBox());
-    const svgSize =  document.getElementsByClassName('svg')[0].getElementsByTagName('svg')[0].getBBox();
+    const svgSize = document
+      .getElementsByClassName("svg")[0]
+      .getElementsByTagName("svg")[0]
+      .getBBox();
     this.setState({
       isDragging: false,
       startPoint: { x: 0, y: 0 },
       viewBox: { x: 0, y: 0, width: svgSize.width, height: svgSize.height }, // Update viewBox after getting the svg dimensions
     });
   }
-
-  startDrag = (e: React.MouseEvent) => {
-    this.setState({
-      isDragging: true,
-      startPoint: { x: e.clientX, y: e.clientY },
-    });
-  };
-
-  endDrag = () => {
-    this.setState({
-      isDragging: false,
-    });
-  };
-
-  drag = (e: React.MouseEvent) => {
-    if (!this.state.isDragging) return;
-
-    const dx = e.clientX - this.state.startPoint.x;
-    const dy = e.clientY - this.state.startPoint.y;
-
-    this.setState((prevState) => ({
-      startPoint: { x: e.clientX, y: e.clientY },
-      viewBox: {
-        x: prevState.viewBox.x - dx,
-        y: prevState.viewBox.y - dy,
-        width: prevState.viewBox.width,
-        height: prevState.viewBox.height,
-      },
-    }));
-  };
-
-  zoom = (e: any) => {
-    e.preventDefault();
-
-    const scaleFactor = 1.2; // this value is to define how much you want to scale
-    const delta = e.clientY > 0 ? scaleFactor : 1 / scaleFactor;
-
-    this.setState((prevState) => ({
-      viewBox: {
-        x: prevState.viewBox.x,
-        y: prevState.viewBox.y,
-        width: prevState.viewBox.width * delta,
-        height: prevState.viewBox.height * delta,
-      },
-    }));
-  };
-
-  zoom1 = (e: any) => {
-    e.preventDefault();
-
-    const scaleFactor = 1.2; // this value is to define how much you want to scale
-    const delta = e.clientY < 0 ? scaleFactor : 1 / scaleFactor;
-
-    this.setState((prevState) => ({
-      viewBox: {
-        x: prevState.viewBox.x,
-        y: prevState.viewBox.y,
-        width: prevState.viewBox.width * delta,
-        height: prevState.viewBox.height * delta,
-      },
-    }));
-  };
 
   render() {
     const { viewBox } = this.state;
@@ -113,38 +88,49 @@ class SvgDragAndZoom extends Component<{}, SvgDragAndZoomState> {
       svgDocument
     );
 
-    console.log('svgDocument', svgDocument);
+    if (viewBox.width !== 0 && viewBox.height !== 0) {
+      // const svgTest = `${`data:image/svg+xml;utf8,${encodeURIComponent(modifiedSvgString)}`}`
+      const blob = new Blob([modifiedSvgString], { type: "image/svg+xml" });
+      this.svgUrl = URL.createObjectURL(blob);
+      console.log(this.svgUrl);
+    }
 
+    console.log("svgDocument", svgDocument);
     return (
-      <div
-        onMouseDown={this.startDrag}
-        onMouseUp={this.endDrag}
-        onMouseMove={this.drag}
-        // onWheel={this.zoom}
-        className="discoveredModel"
-        style={{ width: "100%", height: "100%", overflow: "hidden" }}
+      <TransformWrapper
+        initialScale={1}
+        initialPositionX={200}
+        initialPositionY={100}
+        ref={this.transformComponentRef}
       >
-        <div className="buttons" style={{ display: "flex", justifyContent: "center" }}>
-          <button onClick={this.zoom}>Zoom out</button>
-          <button onClick={this.zoom1}>Zoom in</button>
-        </div>
-
-        <div
-          dangerouslySetInnerHTML={{ __html: modifiedSvgString }}
-          className="svg"
-          // style={{ width: "100%", height: "100%" }}
-        />
-
-        {/* <img src={SVGTest} alt="" /> */}
-        {/* <SVGTest /> */}
-
-        {/* <svg
-          viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`}
-          dangerouslySetInnerHTML={{ __html: SVG }}
-        /> */}
-      </div>
+        {(utils) => (
+          <React.Fragment>
+            <Controls
+              zoomIn={utils.zoomIn}
+              zoomOut={utils.zoomOut}
+              resetTransform={utils.resetTransform}
+            />
+            <TransformComponent>
+              {this.svgTest === "" && (
+                <div
+                  dangerouslySetInnerHTML={{ __html: modifiedSvgString }}
+                  className="svg"
+                />
+              )}
+              {/* <div
+                id="imgExample"
+                dangerouslySetInnerHTML={{ __html: modifiedSvgString }}
+                className="svg"
+                style={{ width: "1000px", height: "1000px" }}
+              />
+              <div onClick={this.zoomToImage}>Example text</div> */}
+              <img src={svgUrl} alt="test" id="imgExample" />
+            </TransformComponent>
+          </React.Fragment>
+        )}
+      </TransformWrapper>
     );
   }
 }
 
-export default SvgDragAndZoom;
+export default YourComponent;

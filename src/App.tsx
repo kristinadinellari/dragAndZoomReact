@@ -1,9 +1,9 @@
-import SvgDragAndZoom from "./svgComponent";
+import Example from "./svgComponent";
 
 function App() {
   return (
     <div className="App">
-      <SvgDragAndZoom />
+      <Example />
     </div>
   );
 }
