@@ -1,19 +1,22 @@
-import { Component } from "react";
+import React, { Component } from "react";
 import { SVG } from "./svg"; // if we will use this as a string
-import Draggable from 'react-draggable'
+import Draggable from "react-draggable";
 
 interface SvgDragAndZoomState {
   isDragging: boolean;
   startPoint: { x: number; y: number };
   viewBox: { x: number; y: number; width: number; height: number };
+  currentScale: number;
 }
 
 class SvgDragAndZoom extends Component<{}, SvgDragAndZoomState> {
+  svgRef: React.RefObject<HTMLDivElement>;
   svgDocument: Document;
 
   constructor(props: {}) {
     super(props);
 
+    this.svgRef = React.createRef();
     const parser = new DOMParser();
     this.svgDocument = parser.parseFromString(SVG, "image/svg+xml");
 
@@ -21,16 +24,23 @@ class SvgDragAndZoom extends Component<{}, SvgDragAndZoomState> {
       isDragging: false,
       startPoint: { x: 0, y: 0 },
       viewBox: { x: 0, y: 0, width: 0, height: 0 }, // Set initial viewBox dimensions
+      currentScale: 1,
     };
   }
 
   componentDidMount = () => {
     this.getAndSetSvgSize();
+  };
+
+  componentDidUpdate() {
+    this.updateTransform();
   }
 
   getAndSetSvgSize() {
-    console.log('size: ', document.getElementsByClassName('svg')[0].getElementsByTagName('svg')[0].getBBox());
-    const svgSize =  document.getElementsByClassName('svg')[0].getElementsByTagName('svg')[0].getBBox();
+    const svgSize = document
+      .getElementsByClassName("svg")[0]
+      .getElementsByTagName("svg")[0]
+      .getBBox();
     this.setState({
       isDragging: false,
       startPoint: { x: 0, y: 0 },
@@ -40,34 +50,22 @@ class SvgDragAndZoom extends Component<{}, SvgDragAndZoomState> {
 
   zoom = (e: any) => {
     e.preventDefault();
-
-    const scaleFactor = 1.2; // this value is to define how much you want to scale
-    const delta = e.clientY > 0 ? scaleFactor : 1 / scaleFactor;
-
     this.setState((prevState) => ({
-      viewBox: {
-        x: prevState.viewBox.x,
-        y: prevState.viewBox.y,
-        width: prevState.viewBox.width * delta,
-        height: prevState.viewBox.height * delta,
-      },
+      currentScale: prevState.currentScale + 0.1,
     }));
   };
 
   zoom1 = (e: any) => {
-    e.preventDefault();
-
-    const scaleFactor = 1.2; // this value is to define how much you want to scale
-    const delta = e.clientY < 0 ? scaleFactor : 1 / scaleFactor;
-
     this.setState((prevState) => ({
-      viewBox: {
-        x: prevState.viewBox.x,
-        y: prevState.viewBox.y,
-        width: prevState.viewBox.width * delta,
-        height: prevState.viewBox.height * delta,
-      },
+      currentScale: prevState.currentScale - 0.1,
     }));
+  };
+
+  updateTransform = () => {
+    const svgElement = this.svgRef.current;
+    if (svgElement) {
+      svgElement.style.transform = `scale(${this.state.currentScale})`;
+    }
   };
 
   render() {
@@ -90,16 +88,22 @@ class SvgDragAndZoom extends Component<{}, SvgDragAndZoomState> {
         className="discoveredModel"
         style={{ width: "100%", height: "100vh", overflow: "hidden" }}
       >
-        <div className="buttons" style={{ display: "flex", justifyContent: "center" }}>
+        <div
+          className="buttons"
+          style={{ display: "flex", justifyContent: "center" }}
+        >
           <button onClick={this.zoom}>Zoom out</button>
           <button onClick={this.zoom1}>Zoom in</button>
         </div>
 
         <Draggable>
-          <div
-            dangerouslySetInnerHTML={{ __html: modifiedSvgString }}
-            className="svg"
-          />
+          <div>
+            <div
+              ref={this.svgRef}
+              dangerouslySetInnerHTML={{ __html: modifiedSvgString }}
+              className="svg"
+            />
+          </div>
         </Draggable>
       </div>
     );
