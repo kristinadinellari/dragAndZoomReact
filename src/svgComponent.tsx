@@ -10,13 +10,11 @@ interface SvgDragAndZoomState {
 }
 
 class SvgDragAndZoom extends Component<{}, SvgDragAndZoomState> {
-  svgRef: React.RefObject<HTMLDivElement>;
   svgDocument: Document;
 
   constructor(props: {}) {
     super(props);
 
-    this.svgRef = React.createRef();
     const parser = new DOMParser();
     this.svgDocument = parser.parseFromString(SVG, "image/svg+xml");
 
@@ -62,7 +60,7 @@ class SvgDragAndZoom extends Component<{}, SvgDragAndZoomState> {
   };
 
   updateTransform = () => {
-    const svgElement = this.svgRef.current;
+    const svgElement = document.getElementsByTagName("svg")[0];
     if (svgElement) {
       svgElement.style.transform = `scale(${this.state.currentScale})`;
     }
@@ -92,14 +90,14 @@ class SvgDragAndZoom extends Component<{}, SvgDragAndZoomState> {
           className="buttons"
           style={{ display: "flex", justifyContent: "center" }}
         >
-          <button onClick={this.zoom}>Zoom out</button>
-          <button onClick={this.zoom1}>Zoom in</button>
+          <button onClick={this.zoom}>Zoom in</button>
+          <button onClick={this.zoom1}>Zoom out</button>
         </div>
 
         <Draggable>
           <div>
             <div
-              ref={this.svgRef}
+              // ref={this.svgRef}
               dangerouslySetInnerHTML={{ __html: modifiedSvgString }}
               className="svg"
             />
