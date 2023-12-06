@@ -22,20 +22,20 @@ class SvgDragAndZoom extends Component<{}, SvgDragAndZoomState> {
     this.state = {
       startPoint: { x: 0, y: 0 },
       viewBox: { x: 0, y: 0, width: 0, height: 0 }, // Set initial viewBox dimensions
-      zoomScale: 2, // Default zoom sensitivity
+      zoomScale: 1, // Default zoom sensitivity
       zoomReset: false,
     };
   }
 
   componentDidMount = () => {
-    this.getAndSetSvgSize();
+    this.updateSvgSize();
   };
 
   componentDidUpdate = () => {
     this.setStyle();
   }
 
-  getAndSetSvgSize() {
+  updateSvgSize() {
     const svgSize = document
       .getElementsByClassName("svg")[0]
       .getElementsByTagName("svg")[0]
@@ -51,7 +51,6 @@ class SvgDragAndZoom extends Component<{}, SvgDragAndZoomState> {
     this.setState((prevState) => ({
       zoomScale: (prevState.zoomScale + 0.5) >= 10 ? 4 : prevState.zoomScale + 0.1,
     }));
-    console.log('zoomIn zoomScale', this.state.zoomScale);
   };
   
   zoomOut = (event: React.MouseEvent<HTMLElement>) => {
@@ -59,23 +58,23 @@ class SvgDragAndZoom extends Component<{}, SvgDragAndZoomState> {
     this.setState((prevState) => ({
       zoomScale: (prevState.zoomScale - 0.5) <= 2 ? prevState.zoomScale - 0.1 : 4,
     }));
-    console.log('zoomOut zoomScale', this.state.zoomScale);
   };
 
   zoomReset = (event: React.MouseEvent<HTMLElement>) => {
     event.preventDefault();
     this.setState(() => ({
-      zoomScale: 2,
+      zoomScale: 1,
       zoomReset: true
     }));
-    console.log('zoomOut zoomScale', this.state.zoomScale);
   };
   
   setStyle = () => {
     const svgElement = document.getElementsByTagName("svg")[0];
-    if (svgElement) {
-      svgElement.style.transform = `scale(${this.state.zoomScale})`;
-    }
+
+    if (!svgElement) return;
+
+    svgElement.style.transform = `scale(${this.state.zoomScale})`;
+
     if (this.state.zoomReset) {
       svgElement.style.transformOrigin = `50% 50%`;
     }
