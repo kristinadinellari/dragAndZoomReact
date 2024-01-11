@@ -20,12 +20,51 @@ enum SCALE {
 
 class SvgDragAndZoom extends Component<{}, SvgDragAndZoomState> {
   svgDocument: Document;
+  currentColor: string;
+  mouseInside = false;
+  // hardcoded ids from smallSvg
+  mockData = { 
+    discoveredModel: {
+      activityIds: {
+        "Parked": "act_8",
+        "Submitted": "act_0",
+        "Target of Opportunity": "act_7"
+      },
+      flowIds: {
+        "Parked->__PROCESS_END__": "df_8--3",
+        "Submitted->Parked": "df_0-8",
+        "Submitted->Target of Opportunity": "df_0-7",
+        "Target of Opportunity->__PROCESS_END__": "df_7--3",
+        "__PROCESS_START__->Submitted": "df_-2-0"
+      },
+      // "svg": <svg....</svg> (smallSvg)
+    }
+  }
+  // very small example of hardcoded ids from bigSvg
+  // mockData = { 
+  //   discoveredModel: {
+  //     activityIds: {
+  //       "Backlog": "act_0",
+  //       "Blocked": "act_13",
+  //       "Closed": "act_2",
+  //       "In Progress": "act_1",
+  //     },
+  //     flowIds: {
+  //       "Closed->In Progress": "df_2-1",
+  //       "__PROCESS_START__->Remediated": "df_-2-3",
+  //       "Backlog->To Do": "df_0-15",
+  //       "Support Awaiting Customer->Closed": "df_5-2",
+  //       "Backlog->Blocked": "df_0-13",
+  //     },
+  //     // "svg": <svg....</svg> (smallSvg)
+  //   }
+  // }
 
   constructor(props: {}) {
     super(props);
 
     const parser = new DOMParser();
-    this.svgDocument = parser.parseFromString(bigSvg, "image/svg+xml");
+    this.svgDocument = parser.parseFromString(smallSvg, "image/svg+xml");
 
     this.state = {
       viewBox: { x: 0, y: 0, width: 0, height: 0 }, // Set initial viewBox dimensions
@@ -40,6 +79,7 @@ class SvgDragAndZoom extends Component<{}, SvgDragAndZoomState> {
 
   componentDidUpdate = () => {
     this.setStyle();
+    this.interactiveModel();
   };
 
   updateSvgSize() {
@@ -81,6 +121,110 @@ class SvgDragAndZoom extends Component<{}, SvgDragAndZoomState> {
       position: { x: 0, y: 0 },
     }));
   };
+
+  // ------------------------ Spike - Interactive discover model - start //
+  getKeyByValue = (object: any, value: string): string => {
+    return Object.keys(object).find(key => object[key] === value);
+  }
+
+  removeProcessStartEnd = (array: string[]): string[] => {
+    // Hardcoded strings coming from BE marking end and start nodes
+    const PROCESS_START_END_VALUES = ['__PROCESS_START__', '__PROCESS_END__'];
+
+    array.forEach((element: string) => {
+      const index: number = PROCESS_START_END_VALUES.indexOf(element);
+      if (index > -1) {
+        array.splice(index, 1);
+      }
+    });
+
+    return array;
+  }
+
+  setElementColor = (event, id: string, shouldHighlight: boolean) => {
+    if (shouldHighlight) {
+      this.currentColor = event.target.parentNode.querySelector(`[data-element-id="${id}"] g`).getAttribute('fill');
+    }
+
+    const activityColor = shouldHighlight ? 'yellow' : this.currentColor;
+    const selectedElements = event.target.parentNode.querySelectorAll(`[data-element-id="${id}"] g`);
+
+    selectedElements.forEach(element => {
+      if (!activityColor) {
+        return;
+      }
+      element.setAttribute('stroke', activityColor);
+      element.setAttribute('fill', activityColor);
+    });
+  }
+
+  updateElementColor = (event, flowName: string, shouldHighlight: boolean) => {
+    const splitString = '->'; // is par of the BE response and it is always in use in this format to mark flow between activities
+    const foundActivities: string[] = flowName.split(splitString);
+    const nodes = this.removeProcessStartEnd(foundActivities);
+
+    nodes.forEach((node: string) => {
+      const id: string = this.mockData.discoveredModel.activityIds[node];
+      if (id) {
+        this.setElementColor(event, id, shouldHighlight);
+      }
+    });
+  }
+
+  interactiveModel = () => {
+    const ids: string[] = [
+      ...Object.values(this.mockData.discoveredModel.activityIds), 
+      ...Object.values(this.mockData.discoveredModel.flowIds)
+    ];
+
+    ids.forEach((id: string) => {
+      const selectedElement = document.querySelectorAll(`[data-element-id="${id}"]`);
+  
+      if (!selectedElement[0]) {
+        return;
+      }
+  
+      (selectedElement[0] as any).style.cursor = 'pointer';
+  
+      (selectedElement[0] as any).addEventListener('click', (event) => {
+        const activityName = this.getKeyByValue(
+          {
+            ...this.mockData.discoveredModel.activityIds, 
+            ...this.mockData.discoveredModel.flowIds
+          }, 
+          id
+        );
+        console.log('Click event is happening on the activity', activityName +  ' with id:', id)
+      });
+  
+      (selectedElement[0] as any).addEventListener('mouseenter', (event) => {
+        if (!this.mouseInside && event.target?.parentNode) {
+          this.mouseInside = true;
+          this.setElementColor(event, id, true);
+          
+          const flowName: string = this.getKeyByValue(this.mockData.discoveredModel.flowIds, id);
+          // on mouseenter when highlighting flow, then highlight start/end nodes as well
+          if (flowName) {
+            this.updateElementColor(event, flowName, true)
+          }
+        }
+      });
+      
+      (selectedElement[0] as any).addEventListener('mouseleave', (event) => {
+        if (this.currentColor && event.target?.parentNode) {
+          this.mouseInside = false;
+          this.setElementColor(event, id, false);
+
+          const flowName: string = this.getKeyByValue(this.mockData.discoveredModel.flowIds, id);
+          // on mouseleave remove the flow highlight color, as well as highlighted start/end nodes
+          if (flowName) {
+            this.updateElementColor(event, flowName, false)
+          }
+        }
+      });
+    })
+  };
+  // ------------------------ Spike - Interactive discover model - end //
 
   setStyle = () => {
     const svgElement = document.getElementsByTagName("svg")[0];
