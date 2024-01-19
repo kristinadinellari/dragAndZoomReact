@@ -10,6 +10,8 @@ import { smallSvg } from "./small-svg";
 interface SvgDragAndZoomState {
   viewBox: { x: number; y: number; width: number; height: number };
   zoomScale: number;
+  showDialog: boolean;
+  disablePanning: boolean;
 }
 
 enum SCALE {
@@ -21,7 +23,11 @@ enum SCALE {
 class SvgDragAndZoom extends Component<{}, SvgDragAndZoomState> {
   svgDocument: Document;
   currentColor: string;
-  mouseInside = false;
+  mouseInside = false; // for better handling of event occurrences
+  clickOnce = false; // for better handling of event occurrences
+  stopInteraction = false; // to disable an iteraction of svg when dialog is snown
+  draggingStarted = false;
+  draggingHappend = false;
   // hardcoded ids from smallSvg
   mockData = { 
     discoveredModel: {
@@ -70,6 +76,8 @@ class SvgDragAndZoom extends Component<{}, SvgDragAndZoomState> {
       viewBox: { x: 0, y: 0, width: 0, height: 0 }, // Set initial viewBox dimensions
       zoomScale: 1, // Default zoom sensitivity
       position: { x: 0, y: 0 },
+      showDialog: false,
+      disablePanning: false,
     };
   }
 
@@ -177,53 +185,82 @@ class SvgDragAndZoom extends Component<{}, SvgDragAndZoomState> {
       ...Object.values(this.mockData.discoveredModel.flowIds)
     ];
 
-    ids.forEach((id: string) => {
-      const selectedElement = document.querySelectorAll(`[data-element-id="${id}"]`);
-  
-      if (!selectedElement[0]) {
-        return;
-      }
-  
-      (selectedElement[0] as any).style.cursor = 'pointer';
-  
-      (selectedElement[0] as any).addEventListener('click', (event) => {
-        const activityName = this.getKeyByValue(
-          {
-            ...this.mockData.discoveredModel.activityIds, 
-            ...this.mockData.discoveredModel.flowIds
-          }, 
-          id
-        );
-        console.log('Click event is happening on the activity', activityName +  ' with id:', id)
-      });
-  
-      (selectedElement[0] as any).addEventListener('mouseenter', (event) => {
-        if (!this.mouseInside && event.target?.parentNode) {
-          this.mouseInside = true;
-          this.setElementColor(event, id, true);
-          
-          const flowName: string = this.getKeyByValue(this.mockData.discoveredModel.flowIds, id);
-          // on mouseenter when highlighting flow, then highlight start/end nodes as well
-          if (flowName) {
-            this.updateElementColor(event, flowName, true)
-          }
+    if(!this.stopInteraction) {
+      ids.forEach((id: string) => {
+        const selectedElement = document.querySelectorAll(`[data-element-id="${id}"]`);
+    
+        if (!selectedElement[0]) {
+          return;
         }
-      });
-      
-      (selectedElement[0] as any).addEventListener('mouseleave', (event) => {
-        if (this.currentColor && event.target?.parentNode) {
-          this.mouseInside = false;
-          this.setElementColor(event, id, false);
+    
+        (selectedElement[0] as any).style.cursor = 'pointer';
+    
+        (selectedElement[0] as any).addEventListener('click', (event) => {
+          if(!this.clickOnce && !this.stopInteraction) {
+            console.log('Click event is happening, draggingHappend: ', this.draggingHappend)
 
-          const flowName: string = this.getKeyByValue(this.mockData.discoveredModel.flowIds, id);
-          // on mouseleave remove the flow highlight color, as well as highlighted start/end nodes
-          if (flowName) {
-            this.updateElementColor(event, flowName, false)
+            if (this.draggingHappend ) {
+              return;
+            }
+
+            const activityName = this.getKeyByValue(
+              {
+                ...this.mockData.discoveredModel.activityIds, 
+                ...this.mockData.discoveredModel.flowIds
+              }, 
+              id
+            );
+
+            this.clickOnce = true;
+            this.stopInteraction = true;
+
+            this.setState({
+              showDialog: true,
+              disablePanning: true,
+            });
+    
+            console.log('Click event is happening on the activity', activityName +  ' with id:', id)
           }
-        }
-      });
-    })
+        });
+    
+        (selectedElement[0] as any).addEventListener('mouseenter', (event) => {
+          if (!this.mouseInside && event.target?.parentNode) {
+            this.mouseInside = true;
+            this.setElementColor(event, id, true);
+            
+            const flowName: string = this.getKeyByValue(this.mockData.discoveredModel.flowIds, id);
+            // on mouseenter when highlighting flow, then highlight start/end nodes as well
+            if (flowName) {
+              this.updateElementColor(event, flowName, true)
+            }
+          }
+        });
+        
+        (selectedElement[0] as any).addEventListener('mouseleave', (event) => {
+          if (this.currentColor && event.target?.parentNode) {
+            this.mouseInside = false;
+            this.setElementColor(event, id, false);
+  
+            const flowName: string = this.getKeyByValue(this.mockData.discoveredModel.flowIds, id);
+            // on mouseleave remove the flow highlight color, as well as highlighted start/end nodes
+            if (flowName) {
+              this.updateElementColor(event, flowName, false)
+            }
+          }
+        });
+      })
+    }
   };
+
+  closeDialog = () => {
+    this.clickOnce = false;
+    this.stopInteraction = false;
+    this.setState({
+      showDialog: false,
+      disablePanning: false,
+    });
+  }
+
   // ------------------------ Spike - Interactive discover model - end //
 
   setStyle = () => {
@@ -250,29 +287,52 @@ class SvgDragAndZoom extends Component<{}, SvgDragAndZoomState> {
     );
 
     return (
-      <div
-        className="discoveredModel"
-        style={{ width: "100%", height: "100vh", overflow: "hidden" }}
-      >
+      <div>
         <div
-          className="buttons"
-          style={{ display: "flex", justifyContent: "center" }}
+          className="action_buttons"
+          style={{ display: "flex", justifyContent: "end" }}
         >
           <button onClick={this.zoomIn}>Zoom in</button>
           <button onClick={this.zoomOut}>Zoom out</button>
           <button onClick={this.zoomReset}>Reset</button>
         </div>
-        <Draggable
-          position={this.state.position}
-          onDrag={(e, data) =>
-            this.setState({ position: { x: data.x, y: data.y } })
+
+        <div className="svg_wrapper" style={{ width: "100%", height: "100%", overflow: "hidden", position: "relative" }}>
+          <Draggable
+            disabled={this.state.disablePanning}
+            position={this.state.position}
+            onStart={(e) => {
+              this.draggingHappend = false; // needed to reset the value to its default state `false`
+              this.draggingStarted = false;
+              console.log('onStart draggingStarted --- ', this.draggingStarted);
+            }}
+            onDrag={(e, data) => {
+              this.draggingStarted = true;
+              console.log('onDrag draggingStarted --- ', this.draggingStarted);
+              this.setState({ position: { x: data.x, y: data.y } })
+            }}
+            onStop={(e) => {
+              console.log('onStop draggingStarted ---  ', this.draggingStarted);
+              if (this.draggingStarted) {
+                this.draggingHappend = true;
+              }
+              console.log('onStop draggingHappend ---  ', this.draggingHappend);
+            }}
+          >
+            <div
+              dangerouslySetInnerHTML={{ __html: modifiedSvgString }}
+              className="svg"
+            />
+          </Draggable>
+          { this.state.showDialog &&
+            <div 
+              className="dialog" 
+              style={{ position: "absolute", zIndex: "1000", top: "0", width: "30%", backgroundColor: "red", height: "inherit" }}>
+                <p>I'm here</p>
+                <button onClick={this.closeDialog}>Close</button>
+            </div>  
           }
-        >
-          <div
-            dangerouslySetInnerHTML={{ __html: modifiedSvgString }}
-            className="svg"
-          />
-        </Draggable>
+        </div>
       </div>
     );
   }
